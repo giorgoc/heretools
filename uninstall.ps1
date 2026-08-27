@@ -1,6 +1,6 @@
 # ============================================================
 # HereTools Uninstaller
-# Version 2.1.0
+# Version 2.4.0
 # Copyright (c) 2026 Aria. All rights reserved.
 # ============================================================
 
@@ -8,6 +8,16 @@ $ErrorActionPreference = "Stop"
 
 try {
     $removed = $false
+    $root = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\')
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $pathEntries = if ($null -eq $userPath) { @() } else { @($userPath.Split(';', [StringSplitOptions]::None)) }
+    $filteredEntries = @($pathEntries | Where-Object {
+        if ([string]::IsNullOrWhiteSpace($_)) { $true } else {
+            try { -not [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFullPath($_.Trim().TrimEnd('\')), $root) } catch { $true }
+        }
+    })
+    $cliPathRemoved = $filteredEntries.Count -ne $pathEntries.Count
+    if ($cliPathRemoved) { [Environment]::SetEnvironmentVariable("Path", ($filteredEntries -join ';'), "User") }
 
     # ------------------------------------------------------------
     # Remove current HereTools parent menus
@@ -60,7 +70,7 @@ try {
     Clear-Host
 
     Write-Host ""
-    Write-Host "  HereTools Uninstaller v2.1.0" -ForegroundColor Cyan
+    Write-Host "  HereTools Uninstaller v2.4.0" -ForegroundColor Cyan
     Write-Host "  Copyright (c) 2026 Aria. All rights reserved." -ForegroundColor DarkGray
     Write-Host ""
 
@@ -80,13 +90,14 @@ try {
     Write-Host "      HTTP Here" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  HereTools files were NOT deleted." -ForegroundColor DarkGray
+    Write-Host "  CLI PATH entry: $(if ($cliPathRemoved) { 'removed' } else { 'not present' })" -ForegroundColor $(if ($cliPathRemoved) { 'Green' } else { 'DarkGray' })
     Write-Host ""
 }
 catch {
     Clear-Host
 
     Write-Host ""
-    Write-Host "  HereTools Uninstaller v2.1.0" -ForegroundColor Red
+    Write-Host "  HereTools Uninstaller v2.4.0" -ForegroundColor Red
     Write-Host "  Copyright (c) 2026 Aria. All rights reserved." -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Uninstall failed." -ForegroundColor Red

@@ -1,6 +1,6 @@
 # ============================================================
 # HereTools Installer
-# Version 2.3.0
+# Version 2.4.0
 # Copyright (c) 2026 Aria. All rights reserved.
 # ============================================================
 
@@ -14,6 +14,8 @@ try {
     $httpHereScript = Join-Path $root "utils\HTTPHere.ps1"
     $sftpGoExe      = Join-Path $root "lib\sftpgo.exe"
     $hereToolsIcon  = Join-Path $root "icons\heretools.ico"
+    $cliScript      = Join-Path $root "heretools.ps1"
+    $cliLauncher    = Join-Path $root "heretools.cmd"
 
     # ------------------------------------------------------------
     # Validate required package files
@@ -34,6 +36,23 @@ try {
     if (-not (Test-Path $hereToolsIcon)) {
         throw "HereTools icon not found: $hereToolsIcon"
     }
+
+    if (-not (Test-Path $cliScript)) { throw "heretools.ps1 not found: $cliScript" }
+    if (-not (Test-Path $cliLauncher)) { throw "heretools.cmd not found: $cliLauncher" }
+
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $pathEntries = if ($null -eq $userPath) { @() } else { @($userPath.Split(';', [StringSplitOptions]::None)) }
+    $normalizedRoot = [IO.Path]::GetFullPath($root).TrimEnd('\')
+    $hasCliPath = $pathEntries | Where-Object {
+        if ([string]::IsNullOrWhiteSpace($_)) { $false } else {
+            try { [StringComparer]::OrdinalIgnoreCase.Equals([IO.Path]::GetFullPath($_.Trim().TrimEnd('\')), $normalizedRoot) } catch { $false }
+        }
+    }
+    if (-not $hasCliPath) {
+        $pathEntries += $normalizedRoot
+        [Environment]::SetEnvironmentVariable("Path", ($pathEntries -join ';'), "User")
+        $cliPathAdded = $true
+    } else { $cliPathAdded = $false }
 
     # HTTPHere.ps1 is optional
     $hasHttp = Test-Path $httpHereScript
@@ -232,7 +251,7 @@ try {
     Clear-Host
 
     Write-Host ""
-    Write-Host "  HereTools Installer v2.3.0" -ForegroundColor Cyan
+    Write-Host "  HereTools Installer v2.4.0" -ForegroundColor Cyan
     Write-Host "  Copyright (c) 2026 Aria. All rights reserved." -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Installation complete." -ForegroundColor Green
@@ -258,6 +277,9 @@ try {
     Write-Host "  Icon      : $hereToolsIcon" -ForegroundColor DarkGray
     Write-Host "  SFTPGo    : $sftpGoExe" -ForegroundColor DarkGray
     Write-Host "  Launcher  : $shellName" -ForegroundColor DarkGray
+    Write-Host "  CLI PATH  : $normalizedRoot" -ForegroundColor DarkGray
+    Write-Host "  CLI PATH  : $(if ($cliPathAdded) { 'added to current user PATH' } else { 'already present' })" -ForegroundColor Green
+    Write-Host "  Note      : Open a new terminal session before using 'heretools'." -ForegroundColor Yellow
     Write-Host ""
 
     Write-Host "  Installed for:" -ForegroundColor Magenta
@@ -270,7 +292,7 @@ catch {
     Clear-Host
 
     Write-Host ""
-    Write-Host "  HereTools Installer v2.3.0" -ForegroundColor Red
+    Write-Host "  HereTools Installer v2.4.0" -ForegroundColor Red
     Write-Host "  Copyright (c) 2026 Aria. All rights reserved." -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Installation failed." -ForegroundColor Red
